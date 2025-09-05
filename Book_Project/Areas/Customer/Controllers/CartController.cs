@@ -171,6 +171,11 @@ namespace Book_Project.Areas.Customer.Controllers
             HttpContext.Session.SetInt32(SD.Ss_CartSessionCount, 0);
             return RedirectToAction("OrderConfirmation", "Cart", new { id = ShoppingCartVM.OrderHeader.Id });
         }
+
+        public IActionResult OrderDetail()
+        {
+            return View();
+        }
         public IActionResult OrderConfirmation(int id)
         {
             return View(id);
