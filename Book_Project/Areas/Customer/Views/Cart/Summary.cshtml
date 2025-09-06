@@ -1,5 +1,6 @@
 ﻿@model Book_Project.Models.ViewModels.ShoppingCartVM
-
+@using Microsoft.Extensions.Options
+@inject IOptions<Book_Project.Utility.StripeSetting> stripe;
 <form method="post">
     <br />
     <div class="backgroundWhiteBorder">
@@ -11,7 +12,7 @@
                         Order Summary
                     </div>
                     <div class="col-6 text-right">
-                        <a asp-action="Index" class="btn btn-info btn-sm">Back to Cart</a>
+                        <a asp-action="Index" class="btn btn-outline-primary btn-sm">Back to Cart</a>
                     </div>
                 </div>
                 <div class="card-body">
@@ -41,7 +42,7 @@
                                 </div>
                                 <div class="row my-1">
                                     <div class="col-3">
-                                        <label>Address</label>
+                                        <label>Street Address</label>
                                     </div>
                                     <div class="col-9">
                                         <input type="text" class="form-control" asp-for="OrderHeader.StreetAddress" />
@@ -84,12 +85,13 @@
                                                 <h6 class="my-0">@list.Product.Title</h6>
                                                 <small class="text-muted">Quantity:@list.Count</small>
                                             </div>
-                                            <span class="text-muted"><i class="fa-solid fa-indian-rupee-sign"></i>&nbsp; @(list.Price* list.Count)</span>
+                                            <span class="text-muted">$@(list.Price* list.Count)</span>
                                         </li>
+
                                     }
                                     <li class="list-group-item d-flex justify-content-between bg-light">
-                                        <small class="text-info">Total (USD)</small>
-                                        <strong class="text-info"><i class="fa-solid fa-indian-rupee-sign"></i>&nbsp; @Model.OrderHeader.OrderTotal</strong>
+                                        <small class="text-info">Total (Amount)</small>
+                                        <strong class="text-info">$@Model.OrderHeader.OrderTotal</strong>
                                     </li>
                                 </ul>
                             </div>
@@ -99,13 +101,29 @@
                 <div class="card-footer">
                     <div class="row">
                         <div class="col-12 col-md-8 pt-2">
-                            <p style="color:maroon; font-size:14px;">Estimate Arrival Date: @DateTime.Now.AddDays(5).ToShortDateString() - @DateTime.Now.AddDays(8).ToShortDateString()</p>
+                            <p style="color:maroon; font-size:14px;">Estimate Arrival Date: @DateTime.Now.AddDays(7).ToShortDateString() - @DateTime.Now.AddDays(14).ToShortDateString()</p>
                         </div>
                         <div class="col-12 col-md-4">
+                            @*Stripe*@
                             @{
-                                var OrderTotalAmount = Model.OrderHeader.OrderTotal * 100;
+                                var orderTotalAmount = Model.OrderHeader.OrderTotal * 100;
                             }
-                            <script src="https://Checkout.Stripe.com/Checkout.js"></script>
+                            <script src="https://checkout.stripe.com/checkout.js"
+                                    class="stripe-button"
+                                    data-key="@stripe.Value.Publishablekey"
+                                    data-amount="@orderTotalAmount"
+                                    data-name="Book Shopping Project"
+                                    data-description="Get Book For Testing"
+                                    data-locale="auto"
+                                    data-label="Place Order"
+                                    data-allow-remember-me="false"
+                                    data-image="https://stripe.com/img/documentation/checkout/marketplace.png">
+                            </script>
+
+                            <script>
+                                var el = document.getElementsByClassName("stripe-button-el");
+                                el[0].style.display = "none";
+                            </script>
                             <button type="submit" value="Place Order" class="btn btn-success form-control">Place Order</button>
                         </div>
                     </div>

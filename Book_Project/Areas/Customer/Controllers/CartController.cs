@@ -3,7 +3,9 @@ using Book_Project.Models;
 using Book_Project.Models.ViewModels;
 using Book_Project.Utility;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Stripe;
 using System.Security.Claims;
 
 namespace Book_Project.Areas.Customer.Controllers
@@ -76,14 +78,14 @@ namespace Book_Project.Areas.Customer.Controllers
                 _unitOfWork.ShoppingCart.Remove(DEL);
             }
             _unitOfWork.Save();
-            //var ClaimsIdentity = (ClaimsIdentity)User.Identity;
-            //var Claims = ClaimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
-            //if (Claims != null)
-            //{
-            //    var Count = _unitOfWork.ShoppingCart.GetAll
-            //    (sc => sc.ApplicationUserId == Claims.Value).ToList().Count;
-            //    HttpContext.Session.SetInt32(SD.Ss_CartSessionCount, Count);
-            //}
+            var claimsidentity = (ClaimsIdentity)User.Identity;
+            var claims = claimsidentity.FindFirst(ClaimTypes.NameIdentifier);
+            if (claims != null)
+            {
+                var count = _unitOfWork.ShoppingCart.GetAll
+                (sc => sc.ApplicationUserId == claims.Value).ToList().Count;
+                HttpContext.Session.SetInt32(SD.Ss_CartSessionCount, count);
+            }
             return RedirectToAction(nameof(Index));
         }
         public IActionResult delete(int id)
@@ -91,14 +93,14 @@ namespace Book_Project.Areas.Customer.Controllers
             var Cart = _unitOfWork.ShoppingCart.Get(id);
             _unitOfWork.ShoppingCart.Remove(Cart);
             _unitOfWork.Save();
-            //var ClaimsIdentity = (ClaimsIdentity)User.Identity;
-            //var Claims = ClaimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
-            //if (Claims != null)
-            //{
-            //    var Count = _unitOfWork.ShoppingCart.GetAll
-            //    (sc => sc.ApplicationUserId == Claims.Value).ToList().Count;
-            //    HttpContext.Session.SetInt32(SD.Ss_CartSessionCount, Count);
-            //}
+            var claimsidentity = (ClaimsIdentity)User.Identity;
+            var claims = claimsidentity.FindFirst(ClaimTypes.NameIdentifier);
+            if (claims != null)
+            {
+                var count = _unitOfWork.ShoppingCart.GetAll
+                (sc => sc.ApplicationUserId == claims.Value).ToList().Count;
+                HttpContext.Session.SetInt32(SD.Ss_CartSessionCount, count);
+            }
             return RedirectToAction(nameof(Index));
         }
         public IActionResult Summary()
@@ -135,7 +137,7 @@ namespace Book_Project.Areas.Customer.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [ActionName("Summary")]
-        public IActionResult SummaryPost()
+        public IActionResult SummaryPost(string stripeToken)
         {
             var ClaimsIdentity = (ClaimsIdentity)(User.Identity);
             var Claims = ClaimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
@@ -169,6 +171,43 @@ namespace Book_Project.Areas.Customer.Controllers
 
             //Session
             HttpContext.Session.SetInt32(SD.Ss_CartSessionCount, 0);
+
+            //Stripe
+            if (stripeToken == null)
+            {
+                ShoppingCartVM.OrderHeader.PaymentDueDate = DateTime.Today.AddDays(30);
+
+
+                ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusDelayPayment;
+                ShoppingCartVM.OrderHeader.OrderStatus = SD.OrderStatusApproved;
+            }
+            else
+            {
+                //Payment Process
+                var options = new ChargeCreateOptions()
+                {
+                    Amount = Convert.ToInt32(ShoppingCartVM.OrderHeader.OrderTotal),
+                    Currency = "usd",
+                    Description = "Order Id:" + ShoppingCartVM.OrderHeader.Id.ToString(),
+                    Source = stripeToken
+                };
+                //Payment
+                var service = new ChargeService();
+                Charge charge = service.Create(options);
+                if (charge.BalanceTransactionId == null)
+
+                    ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusDelayPayment;
+                else
+                    ShoppingCartVM.OrderHeader.TransactionId = charge.BalanceTransactionId;
+                if (charge.Status.ToLower() == "succeeded")
+                {
+                    ShoppingCartVM.OrderHeader.PaymentStatus = SD.PaymentStatusApproved;
+                    ShoppingCartVM.OrderHeader.OrderStatus = SD.OrderStatusApproved;
+                    ShoppingCartVM.OrderHeader.OrderDate = DateTime.Now;
+                }
+                _unitOfWork.Save();
+            }
+
             return RedirectToAction("OrderConfirmation", "Cart", new { id = ShoppingCartVM.OrderHeader.Id });
         }
 

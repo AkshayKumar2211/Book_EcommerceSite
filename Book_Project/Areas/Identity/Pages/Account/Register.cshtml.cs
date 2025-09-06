@@ -207,7 +207,7 @@ namespace Book_Project.Areas.Identity.Pages.Account
                     }
 
                     // created admin role by below codeand coment it after it
-                   //  await _userManager.AddToRoleAsync(user, SD.Role_Admin);
+                    // await _userManager.AddToRoleAsync(user, SD.Role_Admin);
 
 
                     if(Input.Role==null && Input.CompanyId==null)

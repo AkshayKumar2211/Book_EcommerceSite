@@ -2,8 +2,10 @@
 using Book_Project.DataAccess.Data;
 using Book_Project.DataAccess.Repository;
 using Book_Project.DataAccess.Repository.IRepository;
+using Book_Project.Utility;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Stripe;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +39,9 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
 });
+// stripe payment
+builder.Services.Configure<StripeSetting>
+    (builder.Configuration.GetSection("StripeSetting"));
 
 var app = builder.Build();
 
@@ -56,7 +61,7 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseSession();
 app.UseRouting();
-
+StripeConfiguration.ApiKey = builder.Configuration.GetSection("StripeSetting")["Secretkey"];
 app.UseAuthorization();
 
 app.MapControllerRoute(
